@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>오픈 에어</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='home.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='main.css') }}">
+</head>
+<header>
+    <h1 class="open-air">Open-Air</h1>
+</header>
+<body>
+    <div class="hero">
+        <h1>Book Your Flight Now</h1>
+        <p>Get ready to explore your dream destinations with our efficient and seamless flight booking services.</p>
+        <div class="buttons">
+            <button>Book Now</button>
+        </div>
+    </div>
+
+    <div class="airport-selection">
+        <label for="departure">출발 공항:</label>
+        <select id="departure">
+            <option value="ICN">Incheon (ICN)</option>
+            <option value="GMP">Gimpo (GMP)</option>
+            <option value="CJU">Jeju (CJU)</option>
+        </select>
+
+        <label for="arrival">도착 공항:</label>
+        <select id="arrival">
+            <option value="HKG">Hong Kong (HKG)</option>
+            <option value="NRT">Narita (NRT)</option>
+            <option value="SIN">Singapore (SIN)</option>
+        </select>
+
+        <label for="date">날짜 선택:</label>
+        <input type="date" id="date" min="">
+
+        <button id="search-btn">검색</button>
+    </div>
+     
+    <div id="target-section" class="content">
+        <div class="loading" id="loading">로딩 중...</div>
+    </div>
+
+    <script>
+        document.querySelector('.buttons button').addEventListener('click', function() {
+            document.getElementById('target-section').scrollIntoView({
+                behavior: 'smooth'
+            });
+        });
+
+        document.querySelector('#search-btn').addEventListener('click', function() {
+            let start = document.getElementById('departure').value;
+            let dest = document.getElementById('arrival').value;
+            let date = document.getElementById('date').value;
+
+            fetch(`/api/data/${start}/${dest}?date=${date}`)
+                .then(response => response.json())
+                .then(data => updateContent(data))
+                .catch(error => {
+                    console.error('Error fetching data:', error);
+                });
+        });
+
+        document.addEventListener("DOMContentLoaded", function() {
+            const dateInput = document.getElementById('date');
+            const today = new Date();
+            const tomorrow = new Date(today);
+            tomorrow.setDate(today.getDate() + 1);
+            dateInput.min = tomorrow.toISOString().split('T')[0];
+
+            dateInput.value = tomorrow.toISOString().split('T')[0];
+
+            fetch(`/api/data/ICN/HKG?date=${dateInput.value}`)
+                .then(response => response.json())
+                .then(data => updateContent(data))
+                .catch(error => {
+                    console.error('Error fetching data:', error);
+                });
+        });
+
+        function updateContent(data) {
+            const targetSection = document.getElementById('target-section');
+            targetSection.innerHTML = '';
+
+            const sources = ['interpark', 'naver', 'kayak'];
+            const imgSrc = {
+                interpark: '인터파크로고.png',
+                naver: '네이버.png',
+                kayak: '카약.png'
+            };
+            sources.forEach(source => {
+                if (data[source]) {
+                    const item = data[source][source];
+                    const card = document.createElement('div');
+                    card.className = 'card';
+
+                    const img = document.createElement('img');
+                    img.src = `{{ url_for('static', filename='')}}${imgSrc[source]}`;
+                    img.alt = `${source} 로고`;
+                    img.className = 'logo';
+                    card.appendChild(img);
+
+                    const lowestPrice = document.createElement('div');
+                    lowestPrice.className = 'price';
+                    lowestPrice.textContent = `Lowest: ${item.cheapest_price}원`;
+                    card.appendChild(lowestPrice);
+
+                    const highestPrice = document.createElement('div');
+                    highestPrice.className = 'price';
+                    highestPrice.textContent = `Highest: ${item.max_price}원`;
+                    card.appendChild(highestPrice);
+
+                    const button = document.createElement('button');
+                    button.className = 'more-info';
+                    button.textContent = 'More-info';
+                    button.addEventListener('click', function() {
+                        window.open(item.url, '_blank');
+                    });
+                    card.appendChild(button);
+
+                    targetSection.appendChild(card);
+                }
+            });
+        }
+    </script>
+</body>
+</html>
